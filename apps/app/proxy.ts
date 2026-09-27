@@ -5,7 +5,6 @@ import { isMarketing } from "@/lib/env";
 import {
 	ONBOARDING_PATH,
 	RESEARCH_PATH,
-	readResearchGate,
 	readWorkspaceGate,
 } from "@/lib/onboarding";
 import { workspaceUrl } from "@/lib/workspace-url";
@@ -37,17 +36,13 @@ export async function proxy(request: NextRequest) {
 
 	if (isUngated(pathname)) return NextResponse.next();
 
-	// Both answers, every time, and concurrently — so the gate costs one round
-	// trip rather than two, and neither answer can be stale.
-	const [workspace, research] = await Promise.all([
-		readWorkspaceGate(request),
-		readResearchGate(request),
-	]);
+	// The Context research key is optional here: an admin can add it later on
+	// Settings → General, so it no longer blocks anyone from the CRM.
+	const workspace = await readWorkspaceGate(request);
 
 	if (workspace.gate === "required") return sendTo(ONBOARDING_PATH, request);
-	if (research === "required") return sendTo(RESEARCH_PATH, request);
 
-	const settled = workspace.gate === "settled" && research === "settled";
+	const settled = workspace.gate === "settled";
 
 	if (!settled || !workspace.slug) return NextResponse.next();
 
