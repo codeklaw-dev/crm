@@ -11,6 +11,7 @@ import { API_KEY_EXPIRATION, API_KEY_HEADER, API_KEY_PREFIX } from "./api-keys";
 import { AUTH_COOKIE_PREFIX } from "./cookies";
 import { env } from "./env";
 import { ensureWorkspaceMembership } from "./organization";
+import { isPasswordSignUp, isPasswordSignUpAllowed } from "./password-sign-up";
 import {
 	GOOGLE_PROVIDER_ID,
 	MICROSOFT_PROVIDER_ID,
@@ -78,7 +79,9 @@ export const auth = betterAuth({
 	}),
 
 	emailAndPassword: {
-		enabled: false,
+		enabled: true,
+		minPasswordLength: 8,
+		autoSignIn: true,
 	},
 
 	socialProviders,
@@ -258,7 +261,17 @@ export const auth = betterAuth({
 
 		user: {
 			create: {
-				before: async (user) => {
+				before: async (user, context) => {
+					if (
+						isPasswordSignUp(context?.path) &&
+						!isPasswordSignUpAllowed(user.email)
+					) {
+						throw new APIError("FORBIDDEN", {
+							message:
+								"This email has not been invited to create a password account. Ask an admin to add it, or continue with Google.",
+						});
+					}
+
 					if (!hasSignInAllowList()) {
 						throw new APIError("FORBIDDEN", {
 							message:
