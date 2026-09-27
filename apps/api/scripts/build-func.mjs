@@ -15,7 +15,9 @@ import { fileURLToPath } from "node:url";
 const apiDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const repoRoot = dirname(dirname(apiDir));
 const outDir = join(repoRoot, ".vercel/output");
-const funcDir = join(outDir, "functions/api/index.func");
+// Not functions/api/index.func: Vercel also builds apps/api/api/index.ts as a
+// zero-config function at that same path, and the two collide.
+const funcDir = join(outDir, "functions/crm-api.func");
 const bun = process.env.BUN_BIN || "bun";
 
 const EXTERNALS = [
@@ -176,7 +178,7 @@ writeFileSync(
 	join(outDir, "config.json"),
 	JSON.stringify({
 		version: 3,
-		routes: [{ src: "/(.*)", dest: "/api/index" }],
+		routes: [{ src: "/(.*)", dest: "/crm-api" }],
 		crons: [{ path: "/internal/sync/google", schedule: "0 3 * * *" }],
 	}),
 );
