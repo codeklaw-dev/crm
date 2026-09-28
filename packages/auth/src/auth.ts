@@ -268,7 +268,7 @@ export const auth = betterAuth({
 					) {
 						throw new APIError("FORBIDDEN", {
 							message:
-								"This email has not been invited to create a password account. Ask an admin to add it, or continue with Google.",
+								"Password sign-up is only open to @racoai.io addresses. Use your work email, or continue with Google.",
 						});
 					}
 
