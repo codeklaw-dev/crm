@@ -1,0 +1,73 @@
+name: Docker
+
+on:
+  push:
+    branches: [release, self-host]
+  workflow_dispatch:
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-smoke:
+    name: build image, run stack, smoke test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          docker system prune -af
+          df -h /
+
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: runtime
+          load: true
+          tags: crm:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Write the smoke-test environment
+        run: |
+          cat > .env <<EOF
+          POSTGRES_PASSWORD=smoke-$(openssl rand -hex 12)
+          BETTER_AUTH_SECRET=$(openssl rand -base64 32)
+          CRON_SECRET=$(openssl rand -hex 24)
+          ALLOWED_SIGN_IN=example.com
+          API_URL=http://localhost:3001
+          APP_URL=http://localhost:3000
+          CRM_TELEMETRY_DISABLED=1
+          EOF
+
+      - name: Start the stack
+        run: docker compose -f docker-compose.prod.yml up -d --no-build
+
+      - name: Smoke test
+        run: bash scripts/smoke-test.sh
+
+      - name: Show logs
+        if: always()
+        run: docker compose -f docker-compose.prod.yml logs --no-color --tail=300
+
+      - name: Publish the image
+        if: github.ref == 'refs/heads/release'
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker tag crm:latest "$image:latest"
+          docker tag crm:latest "$image:${GITHUB_SHA::7}"
+          docker push "$image:latest"
+          docker push "$image:${GITHUB_SHA::7}"

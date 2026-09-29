@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+**/node_modules
+**/.next
+**/.turbo
+**/.eve
+**/.output
+**/dist
+.vercel
+.git
+.claude
+.agents
+docs/images

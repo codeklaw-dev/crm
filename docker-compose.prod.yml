@@ -1,0 +1,88 @@
+name: crm
+
+x-crm-image: &crm-image
+  image: ${CRM_IMAGE:-crm:latest}
+  build:
+    context: .
+    target: runtime
+    args:
+      API_URL: ${API_URL:-http://localhost:3001}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+
+x-crm-env: &crm-env
+  env_file:
+    - path: .env
+      required: true
+  environment:
+    DATABASE_URL: postgresql://crm:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/crm?schema=public
+    NODE_ENV: production
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: crm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: crm
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crm -d crm"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  migrate:
+    <<: [*crm-image, *crm-env]
+    working_dir: /repo/packages/db
+    command: ["bunx", "prisma", "migrate", "deploy"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    <<: [*crm-image, *crm-env]
+    working_dir: /repo/apps/api
+    command: ["bun", "src/main.ts"]
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-3001}:3001"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  app:
+    <<: [*crm-image, *crm-env]
+    working_dir: /repo/apps/app
+    command: ["node", "../../node_modules/next/dist/bin/next", "start", "-p", "3000"]
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  agent:
+    <<: [*crm-image, *crm-env]
+    profiles: ["agent"]
+    working_dir: /repo/apps/agent
+    command: ["bun", "run", "start"]
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://crm:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/crm?schema=public
+      NODE_ENV: production
+      AGENT_PORT: "2000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
