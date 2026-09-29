@@ -62,10 +62,16 @@ services:
   app:
     <<: [*crm-image, *crm-env]
     working_dir: /repo/apps/app
-    command: ["node", "../../node_modules/next/dist/bin/next", "start", "-p", "3000"]
+    command: ["bun", "run", "start"]
     restart: unless-stopped
     ports:
       - "${APP_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:3000/sign-in"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     depends_on:
       api:
         condition: service_healthy
