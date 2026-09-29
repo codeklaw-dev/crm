@@ -43,8 +43,10 @@ the three that is genuinely optional on its own — set it to your tenant's GUID
 refuse other tenants at Microsoft instead of at `ALLOWED_SIGN_IN`. There is **no
 Microsoft equivalent of `hd`**: `tenantId` is the whole of it.
 
-**Neither pair is required, but an install wants one of them or an SSO provider** —
-with none, the sign-in page says so by name rather than rendering nothing.
+**Neither pair is required.** Email + password sign-in is always on
+(`emailAndPassword` in `packages/auth/src/auth.ts`), and `ALLOWED_SIGN_IN` decides who
+may create an account. A password account never sees `/grant-access`, because
+`needsMailboxGrant` walls only accounts whose sign-in rows are all mailbox providers.
 
 **`ALLOWED_SIGN_IN`** — comma-separated whole domains or single addresses (bare
 addresses exist for a solo self-hoster, where `gmail.com` would be an open door). **One

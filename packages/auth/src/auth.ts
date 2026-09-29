@@ -11,7 +11,6 @@ import { API_KEY_EXPIRATION, API_KEY_HEADER, API_KEY_PREFIX } from "./api-keys";
 import { AUTH_COOKIE_PREFIX } from "./cookies";
 import { env } from "./env";
 import { ensureWorkspaceMembership } from "./organization";
-import { isPasswordSignUp, isPasswordSignUpAllowed } from "./password-sign-up";
 import {
 	GOOGLE_PROVIDER_ID,
 	MICROSOFT_PROVIDER_ID,
@@ -261,17 +260,7 @@ export const auth = betterAuth({
 
 		user: {
 			create: {
-				before: async (user, context) => {
-					if (
-						isPasswordSignUp(context?.path) &&
-						!isPasswordSignUpAllowed(user.email)
-					) {
-						throw new APIError("FORBIDDEN", {
-							message:
-								"Password sign-up is only open to @racoai.io addresses. Use your work email, or continue with Google.",
-						});
-					}
-
+				before: async (user) => {
 					if (!hasSignInAllowList()) {
 						throw new APIError("FORBIDDEN", {
 							message:

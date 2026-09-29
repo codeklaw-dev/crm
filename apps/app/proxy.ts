@@ -36,8 +36,6 @@ export async function proxy(request: NextRequest) {
 
 	if (isUngated(pathname)) return NextResponse.next();
 
-	// The Context research key is optional here: an admin can add it later on
-	// Settings → General, so it no longer blocks anyone from the CRM.
 	const workspace = await readWorkspaceGate(request);
 
 	if (workspace.gate === "required") return sendTo(ONBOARDING_PATH, request);

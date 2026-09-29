@@ -15,8 +15,6 @@ import { fileURLToPath } from "node:url";
 const apiDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const repoRoot = dirname(dirname(apiDir));
 const outDir = join(repoRoot, ".vercel/output");
-// Not functions/api/index.func: Vercel also builds apps/api/api/index.ts as a
-// zero-config function at that same path, and the two collide.
 const funcDir = join(outDir, "functions/crm-api.func");
 const bun = process.env.BUN_BIN || "bun";
 
