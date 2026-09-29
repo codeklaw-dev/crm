@@ -2,7 +2,7 @@
 
 FROM oven/bun:1.3.12 AS bun
 
-FROM node:22-bookworm-slim AS base
+FROM node:24-bookworm-slim AS base
 COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 RUN ln -s /usr/local/bin/bun /usr/local/bin/bunx \
 	&& apt-get update \
